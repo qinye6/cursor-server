@@ -5,6 +5,7 @@ users:
     expires_at: null
     password: admin123
     role: admin
+    cursor_token: null
   ceshi:
     created_at: '2024-01-01'
     enabled: true

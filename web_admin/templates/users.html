@@ -16,6 +16,7 @@
                     <th>状态</th>
                     <th>创建时间</th>
                     <th>到期时间</th>
+                    <th>Cursor Token</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -40,6 +41,16 @@
                         {% else %}
                             <span class="badge bg-info">永不过期</span>
                         {% endif %}
+                    </td>
+                    <td>
+                        {% if user.cursor_token %}
+                            <span class="badge bg-success">已设置</span>
+                        {% else %}
+                            <span class="badge bg-warning">未设置</span>
+                        {% endif %}
+                        <button class="btn btn-sm btn-primary" onclick="manageCursorToken('{{ username }}', '{{ user.cursor_token }}')">
+                            管理Token
+                        </button>
                     </td>
                     <td>
                         <button class="btn btn-sm btn-warning" onclick="toggleUser('{{ username }}')">
@@ -153,6 +164,31 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                 <button type="button" class="btn btn-primary" onclick="changePassword()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加 Token 管理模态框 -->
+<div class="modal fade" id="tokenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">管理 Cursor Token</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tokenUsername">
+                <div class="mb-3">
+                    <label class="form-label">Cursor Token</label>
+                    <input type="text" class="form-control" id="cursorToken" placeholder="请输入 Cursor Token">
+                    <small class="text-muted">在 Cursor 设置中获取 API Token</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="removeCursorToken()">移除Token</button>
+                <button type="button" class="btn btn-primary" onclick="saveCursorToken()">保存</button>
             </div>
         </div>
     </div>
@@ -298,7 +334,52 @@ function changePassword() {
             alert('密码修改成功');
             bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
         } else {
-            alert('密码修���失败: ' + data.error);
+            alert('密码修改失败: ' + data.error);
+        }
+    });
+}
+
+function manageCursorToken(username, currentToken) {
+    document.getElementById('tokenUsername').value = username;
+    document.getElementById('cursorToken').value = currentToken || '';
+    new bootstrap.Modal(document.getElementById('tokenModal')).show();
+}
+
+function saveCursorToken() {
+    const username = document.getElementById('tokenUsername').value;
+    const token = document.getElementById('cursorToken').value;
+    
+    fetch(`/api/users/${username}/token`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            cursor_token: token
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('保存Token失败: ' + data.error);
+        }
+    });
+}
+
+function removeCursorToken() {
+    const username = document.getElementById('tokenUsername').value;
+    
+    fetch(`/api/users/${username}/token`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('移除Token失败: ' + data.error);
         }
     });
 }

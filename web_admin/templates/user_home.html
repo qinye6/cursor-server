@@ -28,6 +28,14 @@
                         <i class="fas fa-key"></i> 修改密码
                     </button>
                 </div>
+                <div class="mb-3">
+                    <strong>Cursor Token:</strong>
+                    {% if user_info.cursor_token %}
+                        <span class="badge bg-success">已设置</span>
+                    {% else %}
+                        <span class="badge bg-warning">未设置</span>
+                    {% endif %}
+                </div>
             </div>
             <div class="col-md-8">
                 <table class="table">

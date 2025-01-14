@@ -141,7 +141,7 @@ def users():
 @login_required
 def add_user():
     if current_user.role != 'admin':
-        return jsonify({'error': '需要管理��权限'}), 403
+        return jsonify({'error': '需要管理员权限'}), 403
     data = request.json
     config_manager.add_user(
         data['username'],
@@ -372,3 +372,34 @@ def change_user_password():
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500 
+
+@app.route('/api/users/<username>/token', methods=['POST'])
+@login_required
+def set_user_token(username):
+    if current_user.role != 'admin':
+        return jsonify({'error': '需要管理员权限'}), 403
+        
+    data = request.json
+    cursor_token = data.get('cursor_token')
+    
+    user = config_manager.get_user(username)
+    if user:
+        user['cursor_token'] = cursor_token
+        config_manager.save_users()
+        return jsonify({'status': 'success'})
+        
+    return jsonify({'error': '用户不存在'}), 404
+
+@app.route('/api/users/<username>/token', methods=['DELETE'])
+@login_required
+def remove_user_token(username):
+    if current_user.role != 'admin':
+        return jsonify({'error': '需要管理员权限'}), 403
+        
+    user = config_manager.get_user(username)
+    if user:
+        user['cursor_token'] = None
+        config_manager.save_users()
+        return jsonify({'status': 'success'})
+        
+    return jsonify({'error': '用户不存在'}), 404 

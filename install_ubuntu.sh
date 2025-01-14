@@ -5,7 +5,7 @@ echo "开始安装代理服务器..."
 # 检查是否为root用户
 if [ "$EUID" -ne 0 ]; then 
     echo "请使用root权限运行此脚本"
-    echo "使用方法: sudo bash install_centos.sh"
+    echo "使用方法: sudo bash install_ubuntu.sh"
     exit 1
 fi
 
@@ -14,25 +14,39 @@ INSTALL_DIR="/opt/server"
 
 # 更新系统并安装必要的包
 echo "正在更新系统并安装必要的包..."
-yum update -y
-yum install -y epel-release
 
-# 安装 Python 3.6（EPEL 仓库提供的稳定版本）
-yum install -y python36 python36-pip python36-devel
+# 安装Python3依赖
+echo "安装Python3依赖..."
+apt install -y python3-importlib-metadata python3-importlib-resources python3-typing-extensions || {
+    echo "警告: 安装Python3依赖失败，继续执行..."
+}
 
-# 创建软链接
-ln -sf /usr/bin/python3.6 /usr/bin/python3
-ln -sf /usr/bin/pip3.6 /usr/bin/pip3
+# 修复包依赖关系
+echo "修复包依赖关系..."
+dpkg --configure -a
+apt install -f -y
 
-# 安装其他工具
-yum install -y wget git unzip
+# 重新安装Python3
+echo "重新安装Python3..."
+apt install --reinstall -y python3-minimal python3 python3-dev python3-pip
 
-# 检查Python3安装
-echo "检查Python3安装..."
-if ! command -v python3 &> /dev/null; then
+# 验证Python3安装
+if ! which python3 > /dev/null; then
     echo "错误: Python3 安装失败"
+    echo "请尝试手动执行以下命令："
+    echo "sudo apt install --reinstall python3-minimal python3"
+    echo "sudo apt install -f"
     exit 1
 fi
+
+# 安装其他必要包
+PACKAGES="git wget unzip ufw"
+for package in $PACKAGES; do
+    echo "正在安装 $package..."
+    apt install -y $package || {
+        echo "警告: $package 安装失败，继续尝试其他包..."
+    }
+done
 
 # 显示Python版本
 echo "Python版本:"
@@ -46,8 +60,18 @@ cd $INSTALL_DIR
 
 # 安装Python依赖
 echo "安装Python依赖..."
-pip3 install --upgrade pip
-pip3 install flask flask-login pyyaml
+pip3 install --upgrade pip || {
+    echo "警告: pip升级失败，继续执行..."
+}
+
+PYTHON_PACKAGES="flask flask-login pyyaml"
+for package in $PYTHON_PACKAGES; do
+    echo "正在安装 Python包 $package..."
+    pip3 install $package || {
+        echo "错误: Python包 $package 安装失败"
+        exit 1
+    }
+done
 
 # 验证依赖安装
 echo "验证Python依赖安装..."
@@ -62,17 +86,39 @@ mkdir -p {config,logs,cert,core,web_admin}
 
 # 下载项目文件
 echo "下载项目文件..."
-# 这里假设您已经把项目文件打包上传到某个URL
-# 替换为您的实际下载地址
-DOWNLOAD_URL="https://github.com/qinye6/cursor-server.git"
-wget $DOWNLOAD_URL -O cursor-server-main.zip || {
-    echo "下载项目文件失败，请检查网络连接"
-    exit 1
-}
+if [ -d "$INSTALL_DIR/.git" ]; then
+    echo "检测到已存在的git仓库，尝试更新..."
+    cd $INSTALL_DIR
+    git fetch origin || {
+        echo "警告: 更新仓库失败，尝试重新克隆..."
+        cd ..
+        rm -rf $INSTALL_DIR
+        mkdir -p $INSTALL_DIR
+        cd $INSTALL_DIR
+    }
+else
+    echo "清理安装目录..."
+    rm -rf $INSTALL_DIR/*
+fi
 
-# 解压文件
-tar -xzf cursor-server-main.zip
-rm -f cursor-server-main.zip
+DOWNLOAD_URL="https://github.com/qinye6/cursor-server.git"
+if [ ! -d "$INSTALL_DIR/.git" ]; then
+    git clone $DOWNLOAD_URL . || {
+        echo "下载项目文件失败，请检查网络连接"
+        echo "您可以尝试手动执行: git clone $DOWNLOAD_URL $INSTALL_DIR"
+        exit 1
+    }
+fi
+
+# 确保文件存在
+echo "验证项目文件..."
+for file in "${required_files[@]}"; do
+    if [ ! -f "$INSTALL_DIR/$file" ]; then
+        echo "错误: 缺少必要文件 $file"
+        echo "请确保git clone成功完成"
+        exit 1
+    fi
+done
 
 # 配置文件权限
 echo "配置文件权限..."
@@ -84,12 +130,6 @@ chmod 644 $INSTALL_DIR/config/*.yaml
 # 添加Python文件编码声明
 echo "添加Python文件编码声明..."
 find $INSTALL_DIR -name "*.py" -type f -exec sed -i '1i# -*- coding: utf-8 -*-' {} \;
-
-# 修复 f-strings
-echo "修复Python代码兼容性..."
-find $INSTALL_DIR -name "*.py" -type f -exec sed -i 's/f"\([^"]*\)\\r\\n\([^"]*\)"/"\1\\r\\n\2".format/g' {} \;
-find $INSTALL_DIR -name "*.py" -type f -exec sed -i 's/print(f"/print("/g' {} \;
-find $INSTALL_DIR -name "*.py" -type f -exec sed -i 's/"}/").format/g' {} \;
 
 # 创建systemd服务
 echo "创建系统服务..."
@@ -118,11 +158,11 @@ systemctl daemon-reload
 
 # 配置防火墙
 echo "配置防火墙..."
-firewall-cmd --permanent --add-port=6880/tcp
-firewall-cmd --permanent --add-port=5000/tcp
-firewall-cmd --reload
+ufw allow 6880/tcp
+ufw allow 5000/tcp
+ufw --force enable
 
-# 在启动服务之前添加检查步骤
+# 检查必要文件
 echo "检查必要文件..."
 required_files=(
     "main.py"
@@ -200,7 +240,6 @@ fi
 
 # 启动服务
 echo "启动服务..."
-# 清理可能存在的旧进程
 systemctl stop proxy-server 2>/dev/null || true
 pkill -f "python.*main.py" 2>/dev/null || true
 sleep 2
@@ -227,4 +266,4 @@ echo "5. 查看日志：journalctl -u proxy-server -f"
 echo ""
 echo "安装目录：$INSTALL_DIR"
 echo "配置文件：$INSTALL_DIR/config/config.yaml"
-echo "用户配置：$INSTALL_DIR/config/users.yaml" 
+echo "用户配置：$INSTALL_DIR/config/users.yaml"

@@ -1,0 +1,22 @@
+server:
+  proxy_port: 6880
+  local_port: 5800
+  local_host: "129.226.72.101"
+  proxy_host: "175.27.137.104"
+  buffer_size: 32768
+  connection_timeout: 120
+
+security:
+  enable_auth: true
+  enable_blacklist: true
+  ssl_cert: 'cert/server.crt'
+  ssl_key: 'cert/server.key'
+
+logging:
+  level: INFO
+  access_log: 'logs/access.log'
+  error_log: 'logs/error.log'
+
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090 

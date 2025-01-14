@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title d-flex justify-content-between align-items-center">
+            用户管理
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                添加用户
+            </button>
+        </h5>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>到期时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for username, user in users.items() %}
+                <tr>
+                    <td>{{ username }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if user.enabled else 'danger' }}">
+                            {{ "启用" if user.enabled else "禁用" }}
+                        </span>
+                    </td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        {% if user.expires_at %}
+                            {% if user.expires_at <= now %}
+                                <span class="badge bg-danger">已过期</span>
+                            {% else %}
+                                {{ user.expires_at }}
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-info">永不过期</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="toggleUser('{{ username }}')">
+                            {{ "禁用" if user.enabled else "启用" }}
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="showChangePassword('{{ username }}')">
+                            修改密码
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="modifyExpiry('{{ username }}', '{{ user.expires_at }}')">
+                            修改期限
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser('{{ username }}')">
+                            删除
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 添加用户模态框 -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加用户</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">角色</label>
+                        <select class="form-control" name="role">
+                            <option value="user">普通用户</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">到期天数</label>
+                        <input type="number" class="form-control" name="expires_days" value="30" min="1">
+                        <small class="text-muted">留空表示永不过期</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addUser()">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改期限模态框 -->
+<div class="modal fade" id="expiryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改到期时间</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="expiryUsername">
+                <div class="mb-3">
+                    <label class="form-label">到期日期</label>
+                    <input type="date" class="form-control" id="expiryDate">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="neverExpire">
+                    <label class="form-check-label">永不过期</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="confirmExpiry()">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加修改密码的模态框 -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <input type="hidden" id="passwordUsername">
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">确认密码</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="changePassword()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addUser() {
+    const form = document.getElementById('addUserForm');
+    const data = {
+        username: form.username.value,
+        password: form.password.value,
+        role: form.role.value,
+        expires_days: form.expires_days.value
+    };
+
+    fetch('/api/users', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('添加用户失败: ' + data.error);
+        }
+    });
+}
+
+function deleteUser(username) {
+    if (!confirm(`确定要删除用户 ${username} 吗？`)) {
+        return;
+    }
+
+    fetch(`/api/users/${username}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('删除用户失败: ' + data.error);
+        }
+    });
+}
+
+function toggleUser(username) {
+    fetch(`/api/users/${username}/toggle`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('操作失败: ' + data.error);
+        }
+    });
+}
+
+function modifyExpiry(username, currentExpiry) {
+    const modal = new bootstrap.Modal(document.getElementById('expiryModal'));
+    document.getElementById('expiryUsername').value = username;
+    
+    // 设置当前日期
+    const expiryDate = document.getElementById('expiryDate');
+    const neverExpire = document.getElementById('neverExpire');
+    
+    if (currentExpiry === 'null' || currentExpiry === '') {
+        neverExpire.checked = true;
+        expiryDate.disabled = true;
+    } else {
+        neverExpire.checked = false;
+        expiryDate.disabled = false;
+        expiryDate.value = currentExpiry;
+    }
+    
+    modal.show();
+}
+
+// 处理永不过期复选框
+document.getElementById('neverExpire').addEventListener('change', function() {
+    document.getElementById('expiryDate').disabled = this.checked;
+});
+
+function confirmExpiry() {
+    const username = document.getElementById('expiryUsername').value;
+    const neverExpire = document.getElementById('neverExpire').checked;
+    const expiryDate = document.getElementById('expiryDate').value;
+    
+    fetch(`/api/users/${username}/expiry`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            expires_at: neverExpire ? null : expiryDate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('修改失败: ' + data.error);
+        }
+    });
+}
+
+function showChangePassword(username) {
+    document.getElementById('passwordUsername').value = username;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+function changePassword() {
+    const username = document.getElementById('passwordUsername').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('两次输入的密码不一致');
+        return;
+    }
+    
+    fetch(`/api/users/${username}/password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('密码修改成功');
+            bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+        } else {
+            alert('密码修���失败: ' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mb-4">
+    <!-- 服务器状态卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">服务器状态</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span>代理端口:</span>
+                    <span class="badge bg-info">{{ server_config.proxy_port }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>总连接数:</span>
+                    <span class="badge bg-primary" id="total-connections">
+                        {{ connection_stats.total_connections }} / {{ connection_stats.max_total }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>在线用户数:</span>
+                    <span class="badge bg-success" id="online-users">
+                        {{ connection_stats.user_connections|length }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实时流量统计 -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">实时流量统计</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="trafficChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 在线用户表格 -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">在线用户</h5>
+        <div>
+            <button class="btn btn-sm btn-light" onclick="refreshTable()">
+                <i class="fas fa-sync"></i> 刷新
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="users-table">
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>最后活动</th>
+                        <th>连接数</th>
+                        <th>上传流量</th>
+                        <th>下载流量</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for username, count in connection_stats.user_connections.items() %}
+                    {% set user_stats = get_user_stats(connection_stats.connections, username) %}
+                    <tr>
+                        <td>{{ username }}</td>
+                        <td>{{ user_stats.last_connect_time }}</td>
+                        <td><span class="badge bg-primary">{{ count }}</span></td>
+                        <td>{{ (user_stats.total_sent / 1024 / 1024)|round(2) }} MB</td>
+                        <td>{{ (user_stats.total_received / 1024 / 1024)|round(2) }} MB</td>
+                        <td><span class="badge bg-success">在线</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- 添加 Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- 添加 Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<script>
+// 初始化流量图表
+const ctx = document.getElementById('trafficChart').getContext('2d');
+const trafficChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '上传流量',
+            borderColor: 'rgb(75, 192, 192)',
+            fill: true,
+            tension: 0.4,
+            data: []
+        }, {
+            label: '下载流量',
+            borderColor: 'rgb(255, 99, 132)',
+            fill: true,
+            tension: 0.4,
+            data: []
+        }]
+    },
+    options: {
+        responsive: true,
+        animation: {
+            duration: 0
+        },
+        interaction: {
+            intersect: false
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: '流量 (MB/s)'
+                }
+            }
+        }
+    }
+});
+
+// 定期更新数据
+function updateData() {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            // 更新状态计数
+            document.getElementById('total-connections').textContent = 
+                `${data.total_connections} / ${data.max_total}`;
+            document.getElementById('online-users').textContent = 
+                Object.keys(data.user_connections).length;
+
+            // 更新图表
+            const now = new Date().toLocaleTimeString();
+            trafficChart.data.labels.push(now);
+            trafficChart.data.datasets[0].data.push(data.upload_speed.toFixed(2));
+            trafficChart.data.datasets[1].data.push(data.download_speed.toFixed(2));
+
+            // 保持最近30个数据点
+            if (trafficChart.data.labels.length > 30) {
+                trafficChart.data.labels.shift();
+                trafficChart.data.datasets[0].data.shift();
+                trafficChart.data.datasets[1].data.shift();
+            }
+
+            trafficChart.update('none'); // 使用 'none' 模式更新，减少动画
+           
+            // 同时更新表格
+            refreshTable();
+        });
+}
+
+// 刷新表格数据
+function refreshTable() {
+    fetch('/api/users')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.querySelector('#users-table tbody');
+            tbody.innerHTML = '';
+            
+            for (const [username, stats] of Object.entries(data)) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${username}</td>
+                        <td>${stats.last_active}</td>
+                        <td><span class="badge bg-primary">${stats.connections}</span></td>
+                        <td>${stats.upload_mb.toFixed(2)} MB</td>
+                        <td>${stats.download_mb.toFixed(2)} MB</td>
+                        <td><span class="badge bg-success">在线</span></td>
+                    </tr>
+                `;
+            }
+        });
+}
+
+// 更新间隔改为1秒
+setInterval(updateData, 1000);
+
+// 初始加载
+updateData();
+</script>
+{% endblock %} 

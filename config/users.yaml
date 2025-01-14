@@ -1,0 +1,13 @@
+users:
+  admin:
+    created_at: '2024-01-01'
+    enabled: true
+    expires_at: null
+    password: admin123
+    role: admin
+  ceshi:
+    created_at: '2024-01-01'
+    enabled: true
+    expires_at: '2024-12-31'
+    password: '123456'
+    role: user

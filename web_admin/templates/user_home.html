@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- 账户信息卡片 -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-user-circle text-primary me-2"></i>
+            账户信息
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <strong>用户名：</strong>
+                    <span class="badge bg-info">{{ current_user.id }}</span>
+                </div>
+                <div class="mb-3">
+                    <strong>到期时间：</strong>
+                    <span class="badge bg-primary">{{ user_info.expires_at or '永不过期' }}</span>
+                </div>
+                <div class="mb-3">
+                    <strong>当前状态：</strong>
+                    <span class="badge bg-success">正常</span>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-outline-primary" onclick="showChangePassword()">
+                        <i class="fas fa-key"></i> 修改密码
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>连接数</th>
+                            <th>上传流量</th>
+                            <th>下载流量</th>
+                            <th>最后活动时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ user_stats.connections }}</td>
+                            <td>{{ "%.2f"|format(user_stats.upload_mb) }} MB</td>
+                            <td>{{ "%.2f"|format(user_stats.download_mb) }} MB</td>
+                            <td>{{ user_stats.last_active }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 连接信息卡片 -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-link text-primary me-2"></i>
+            连接信息
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-4">
+            <h6>代理服务器地址：</h6>
+            <div class="input-group">
+                <input type="text" class="form-control" id="proxyUrl" readonly 
+                    value="http://{{ current_user.id }}:{{ user_info.password }}@{{ server_info.host }}:{{ server_info.port }}">
+                <button class="btn btn-outline-primary" onclick="copyProxyUrl()">
+                    <i class="fas fa-copy"></i> 复制
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h6>下载客户端：</h6>
+            <div class="alert alert-info">
+                <h6 class="mb-3"><i class="fas fa-info-circle"></i> 使用说明</h6>
+                <ol class="mb-0">
+                    <li class="mb-3">
+                        <div>第一步：下载代理补丁</div>
+                        <a href="/download/cursor_代理补丁.rar" class="btn btn-primary mt-2">
+                            <i class="fas fa-download"></i> 下载代理补丁
+                        </a>
+                    </li>
+                    <li class="mb-3">
+                        <div>第二步：解压补丁文件</div>
+                        <div class="text-muted small mt-1">
+                            将下载的 cursor_代理补丁.rar 文件解压到任意目录
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <div>第三步：根据系统选择安装方式</div>
+                        <div class="mt-2">
+                            <strong>Windows 用户：</strong>
+                            <ul>
+                                <li>右键点击 install_win.bat，选择"以管理员身份运行"</li>
+                            </ul>
+                            <strong>Mac 用户：</strong>
+                            <ul>
+                                <li>打开终端，进入文件所在目录</li>
+                                <li>执行：<code>chmod +x install_mac.sh</code></li>
+                                <li>执行：<code>sudo ./install_mac.sh</code></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <div>第四步：配置 Cursor</div>
+                        <ol class="mt-2">
+                            <li>选择菜单：文件 → 首选项 → 设置（或按快捷键 Ctrl + ,）</li>
+                            <li>在"搜索设置"中输入 Proxy</li>
+                            <li>在 Http: Proxy 下面填入上方的代理地址</li>
+                            <li>点击保存</li>
+                            <li>关闭 Cursor 后重新打开即可</li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加修改密码的模态框 -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="mb-3">
+                        <label for="oldPassword" class="form-label">当前密码</label>
+                        <input type="password" class="form-control" id="oldPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="changePassword()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyProxyUrl() {
+    var copyText = document.getElementById("proxyUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand("copy");
+    
+    // 显示提示
+    alert("代理地址已复制到剪贴板！");
+}
+
+function showChangePassword() {
+    document.getElementById('oldPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+function changePassword() {
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('两次输入的新密码不一致');
+        return;
+    }
+    
+    fetch('/api/user/password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            old_password: oldPassword,
+            new_password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('密码修改成功，请重新登录');
+            window.location.href = '/logout';
+        } else {
+            alert('密码修改失败: ' + data.error);
+        }
+    });
+}
+</script>
+
+<!-- 添加Font Awesome图标 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %} 

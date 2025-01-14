@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login-wrapper">
+    <div class="col-md-4">
+        <div class="card shadow-lg border-0 login-card">
+            <div class="card-header text-white text-center py-4">
+                <div class="header-icon mb-3">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h4 class="mb-0 fw-light">
+                    注册新账号
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="floating-input mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <input type="text" name="username" class="form-control" 
+                                   required placeholder="用户名">
+                        </div>
+                    </div>
+                    <div class="floating-input mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            <input type="password" name="password" class="form-control" 
+                                   required placeholder="密码">
+                        </div>
+                    </div>
+                    <div class="floating-input mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-check-circle"></i>
+                            </span>
+                            <input type="password" name="confirm_password" class="form-control" 
+                                   required placeholder="确认密码">
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>注册
+                        </button>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-light">
+                            <i class="fas fa-sign-in-alt me-2"></i>返回登录
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.login-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    margin-top: -60px;
+}
+
+.login-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-icon {
+    font-size: 2.5rem;
+    height: 80px;
+    width: 80px;
+    line-height: 80px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.1);
+    backdrop-filter: blur(5px);
+    color: var(--accent-color);
+}
+
+.header-icon i {
+    animation: pulse 2s infinite;
+}
+
+.input-group-text {
+    border: none;
+    background: #f8fafc;
+    color: var(--text-secondary);
+    width: 46px;
+    justify-content: center;
+}
+
+.form-control {
+    border: none;
+    background: #f8fafc;
+    color: var(--text-primary);
+    padding: 0.8rem 1rem;
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary);
+}
+
+.form-control:focus {
+    background: white;
+    box-shadow: none;
+    color: var(--text-primary);
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, var(--accent-color) 0%, var(--hover-color) 100%);
+    border: none;
+    padding: 0.8rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.btn-outline-light {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.btn-outline-light:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.alert {
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.floating-input .input-group {
+    transition: transform 0.3s ease;
+}
+
+.floating-input .input-group:hover {
+    transform: translateY(-2px);
+}
+
+@media (max-width: 576px) {
+    .col-md-4 {
+        width: 90%;
+    }
+}
+</style>
+
+<script>
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
+{% endblock %} 

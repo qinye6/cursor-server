@@ -1,0 +1,36 @@
+#一键安装脚本
+sudo bash install_centos.sh
+
+常用命令：
+1. 启动服务：systemctl start proxy-server
+2. 停止服务：systemctl stop proxy-server
+3. 重启服务：systemctl restart proxy-server
+4. 查看状态：systemctl status proxy-server
+5. 查看日志：journalctl -u proxy-server -f
+
+pkill -9 -f "python.*main.py"
+bash stop-proxy.sh
+bash restart-proxy.sh
+journalctl -u proxy-server -f
+
+
+python3 main.py
+
+
+
+# 停止服务
+bash stop-proxy.sh
+
+# 重启服务
+bash restart-proxy.sh
+
+# 强制结束所有Python进程
+pkill -9 python3
+
+# 检查端口
+netstat -tuln | grep -E ':(6880|5000)'
+
+# 启动服务
+systemctl start proxy-server
+
+http://ceshi:123456@175.27.137.104:6880
